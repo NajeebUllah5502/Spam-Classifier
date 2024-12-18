@@ -72,7 +72,7 @@ def sign_in_page():
             user = check_user(email, password)
             if user:
                 st.success("Logged in successfully!")
-                st.session_state.page = "program"  # Automatically redirect to the program page
+                st.session_state.page = "welcome"  # Automatically redirect to the program page
             else:
                 st.error("Invalid email or password. Please try again.")
         else:
