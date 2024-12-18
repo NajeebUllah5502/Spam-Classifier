@@ -54,11 +54,9 @@ def welcome_page():
     with col1:
         if st.button("Sign In", use_container_width=True):
             st.session_state.page = "sign_in"  # Automatically navigate to sign-in
-            st.experimental_rerun()  # Force rerun to reflect the page change
     with col2:
         if st.button("Sign Up", use_container_width=True):
             st.session_state.page = "sign_up"  # Automatically navigate to sign-up
-            st.experimental_rerun()  # Force rerun to reflect the page change
 
 # Sign In Page
 def sign_in_page():
@@ -75,7 +73,6 @@ def sign_in_page():
             if user:
                 st.success("Logged in successfully!")
                 st.session_state.page = "program"  # Automatically redirect to the program page
-                st.experimental_rerun()  # Force rerun to reflect the page change
             else:
                 st.error("Invalid email or password. Please try again.")
         else:
@@ -84,7 +81,6 @@ def sign_in_page():
     # Navigation back to Welcome Page
     if st.button("Back to Welcome Page", use_container_width=True):
         st.session_state.page = "welcome"
-        st.experimental_rerun()  # Force rerun to reflect the page change
 
 # Sign Up Page
 def sign_up_page():
@@ -103,7 +99,6 @@ def sign_up_page():
                     register_user(email, password)
                     st.success("Account created successfully! You can now log in.")
                     st.session_state.page = "sign_in"  # Automatically redirect to the sign-in page
-                    st.experimental_rerun()  # Force rerun to reflect the page change
                 except sqlite3.IntegrityError:
                     st.error("This email is already registered. Please use a different email.")
             else:
@@ -114,7 +109,6 @@ def sign_up_page():
     # Navigation back to Welcome Page
     if st.button("Back to Welcome Page", use_container_width=True):
         st.session_state.page = "welcome"
-        st.experimental_rerun()  # Force rerun to reflect the page change
 
 # Program Page (after successful sign-in)
 def program_page():
@@ -165,7 +159,6 @@ def program_page():
     # Navigation for Log Out
     if st.button("Log Out", use_container_width=True):
         st.session_state.page = "welcome"
-        st.experimental_rerun()  # Force rerun to reflect the page change
 
 # Main function to control the page flow
 def main():
