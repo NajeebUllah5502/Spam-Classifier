@@ -1,5 +1,7 @@
-import google.generativeai as genai
+import sqlite3
+import hashlib
 import streamlit as st
+import google.generativeai as genai
 
 # Configure the Gemini API
 def genAI(user_prompt):
@@ -15,157 +17,131 @@ def genAI(user_prompt):
     # Return the AI's response text
     return response.text
 
+# Database setup function to create the user table
+def create_user_table():
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+    cursor.execute('''CREATE TABLE IF NOT EXISTS users (
+                        email TEXT PRIMARY KEY,
+                        password TEXT)''')
+    conn.commit()
+    conn.close()
+
+# Function to register a new user
+def register_user(email, password):
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+    
+    # Hash the password before storing it
+    hashed_password = hashlib.sha256(password.encode()).hexdigest()
+    
+    cursor.execute('''INSERT INTO users (email, password) VALUES (?, ?)''', (email, hashed_password))
+    conn.commit()
+    conn.close()
+
+# Function to check if user credentials are valid
+def check_user(email, password):
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+    
+    hashed_password = hashlib.sha256(password.encode()).hexdigest()
+    
+    cursor.execute('''SELECT * FROM users WHERE email = ? AND password = ?''', (email, hashed_password))
+    user = cursor.fetchone()
+    conn.close()
+    return user
+
 # Streamlit Web App
 def main():
-    # Custom HTML and CSS for the app's layout and animation
-    st.markdown("""
-    <style>
-        body {
-            background-color: #f7f8fa;
-            font-family: 'Roboto', sans-serif;
-            margin: 0;
-            padding: 0;
-        }
-        .container {
-            width: 100%;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-            box-sizing: border-box;
-        }
-        .header {
-            text-align: center;
-            font-size: 3em;
-            font-weight: 700;
-            color: #00bfae;
-            text-transform: uppercase;
-            animation: fadeIn 2s ease-out;
-        }
-        .description {
-            text-align: center;
-            font-size: 1.2em;
-            margin-top: 20px;
-            color: #333;
-            animation: fadeIn 2s ease-out;
-        }
-        .message-input {
-            width: 100%;
-            max-width: 600px;
-            margin: 20px auto;
-            padding: 15px;
-            font-size: 1.1em;
-            border-radius: 8px;
-            border: 1px solid #ccc;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            transition: all 0.3s ease-in-out;
-        }
-        .message-input:focus {
-            outline: none;
-            border-color: #00bfae;
-            box-shadow: 0 0 8px rgba(0, 191, 174, 0.6);
-        }
-        .button {
-            background-color: #00bfae;
-            color: white;
-            font-size: 1.2em;
-            padding: 15px 30px;
-            border: none;
-            border-radius: 50px;
-            cursor: pointer;
-            margin-top: 20px;
-            transition: all 0.3s ease;
-            display: block;
-            margin-left: auto;
-            margin-right: auto;
-        }
-        .button:hover {
-            background-color: #008e82;
-        }
-        .result {
-            text-align: center;
-            font-size: 1.5em;
-            margin-top: 30px;
-            color: #333;
-            animation: fadeIn 1s ease-out;
-        }
-        .result span {
-            font-weight: bold;
-        }
-        .suggestion {
-            background-color: #f0f8f0;
-            padding: 20px;
-            border-radius: 8px;
-            margin-top: 30px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-        .suggestion h3 {
-            font-size: 1.5em;
-            color: #00bfae;
-            margin-bottom: 15px;
-        }
-        .suggestion p {
-            font-size: 1.1em;
-            color: #555;
-        }
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-            }
-            to {
-                opacity: 1;
-            }
-        }
-        .animation {
-            animation: fadeIn 1s ease-out;
-        }
-    </style>
-    """, unsafe_allow_html=True)
+    create_user_table()  # Ensure the database table is created
     
-    # App container
-    with st.container():
-        # Header with animation
-        st.markdown('<div class="header">SMS Spam Detection with AI Suggestions</div>', unsafe_allow_html=True)
+    st.title("SMS Spam Detection with AI Suggestions")
+    
+    st.markdown(""" 
+    This is a spam detection tool for SMS messages. 
+    Enter a message, and the tool will predict if it's spam or not using Gemini AI.
+    Additionally, Gemini AI will provide suggestions on improving or modifying the text.
+    """)
+    
+    menu = ["Sign In", "Sign Up"]
+    choice = st.sidebar.selectbox("Select an option", menu)
 
-        # Description
-        st.markdown('<div class="description">Enter an SMS message, and the tool will predict if it\'s spam or not using Gemini AI. Additionally, Gemini AI will provide suggestions for improving the message.</div>', unsafe_allow_html=True)
+    # Sign In Page
+    if choice == "Sign In":
+        st.subheader("Sign In")
+        
+        # User input
+        email = st.text_input("Email")
+        password = st.text_input("Password", type='password')
+        
+        if st.button("Log In"):
+            if email and password:
+                user = check_user(email, password)
+                if user:
+                    st.success("Logged In Successfully!")
+                    # Call spam detection and AI suggestions here
+                    message = st.text_area("Enter SMS message:", "Type here...")
 
-        # User input for message
-        message = st.text_area("Enter SMS message:", "Type here...", key="input_message", height=150)
+                    if st.button("Check if Spam"):
+                        if message:
+                            # Send the message to Gemini AI for spam detection
+                            ai_prompt = f"Is the following message spam or not? Respond with 'Spam' or 'Not Spam': {message}"
+                            ai_response = genAI(ai_prompt)
+                            result = ai_response.strip()  # Extracting the response from Gemini
 
-        # Check for spam button
-        if st.button("Check if Spam", key="check_spam"):
-            if message:
-                # Send the message to Gemini AI for spam detection
-                ai_prompt = f"Is the following message spam or not? Respond with 'Spam' or 'Not Spam': {message}"
-                ai_response = genAI(ai_prompt)
-                result = ai_response.strip()  # Extracting the response from Gemini
+                            # Set score based on AI response
+                            if result.lower() == 'spam':
+                                score = "Poor"
+                            elif result.lower() == 'not spam':
+                                score = "Good"
+                            else:
+                                score = "Uncertain"
 
-                # Set score based on AI response
-                if result.lower() == 'spam':
-                    score = "Poor"
-                elif result.lower() == 'not spam':
-                    score = "Good"
+                            # Additional Metrics
+                            words = len(message.split())
+                            read_time = round(words / 2)
+
+                            # Gemini AI: Generate improvement suggestions
+                            ai_suggestion = genAI(f"Provide suggestions for improving this message: '{message}'")
+                            
+                            # Display results
+                            st.success(f'The message is: {result}')
+                            st.markdown(f"Overall score: {score}")
+                            st.write(f"Words: {words}")
+                            st.write(f"Read time: {read_time} seconds")
+
+                            # Display AI suggestion
+                            st.markdown("**AI Suggestion for Improving the Message:**")
+                            st.write(ai_suggestion)
+
+                        else:
+                            st.warning("Please enter a message.")
                 else:
-                    score = "Uncertain"
-
-                # Additional Metrics
-                words = len(message.split())
-                read_time = round(words / 2)
-
-                # Gemini AI: Generate improvement suggestions
-                ai_suggestion = genAI(f"Provide suggestions for improving this message: '{message}'")
-                
-                # Display result with animation
-                st.markdown(f'<div class="result">The message is: <span>{result}</span></div>', unsafe_allow_html=True)
-                st.markdown(f'<div class="result">Overall score: <span>{score}</span></div>', unsafe_allow_html=True)
-                st.write(f"Words: {words}")
-                st.write(f"Read time: {read_time} seconds")
-
-                # Display AI suggestion with styling
-                st.markdown(f'<div class="suggestion"><h3>AI Suggestion for Improving the Message:</h3><p>{ai_suggestion}</p></div>', unsafe_allow_html=True)
-
+                    st.error("Invalid email or password.")
             else:
-                st.warning("Please enter a message.")
+                st.warning("Please enter both email and password.")
+
+    # Sign Up Page
+    if choice == "Sign Up":
+        st.subheader("Sign Up")
+
+        # User input
+        email = st.text_input("Email")
+        password = st.text_input("Password", type='password')
+        confirm_password = st.text_input("Confirm Password", type='password')
+
+        if st.button("Sign Up"):
+            if email and password and confirm_password:
+                if password == confirm_password:
+                    try:
+                        register_user(email, password)
+                        st.success("Account created successfully! You can now log in.")
+                    except sqlite3.IntegrityError:
+                        st.error("This email is already registered.")
+                else:
+                    st.error("Passwords do not match.")
+            else:
+                st.warning("Please fill out all fields.")
 
 if __name__ == '__main__':
     main()
