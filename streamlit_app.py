@@ -22,8 +22,8 @@ def main():
 
     st.markdown(""" 
     This is a spam detection tool for SMS messages. 
-    Enter a message, and the tool will predict if it's spam or not using Gemini AI.
-    Additionally, Gemini AI will provide suggestions on improving or modifying the text.
+    Enter a message, and the tool will predict if it's spam or not using AI.
+    Additionally, AI will provide suggestions on improving or modifying the text.
     """)
     
     # User input
