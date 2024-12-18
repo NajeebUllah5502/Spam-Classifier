@@ -51,97 +51,134 @@ def check_user(email, password):
     conn.close()
     return user
 
-# Streamlit Web App
+# Welcome Page
+def welcome_page():
+    st.title("SMS Spam Detection with AI Suggestions")
+    st.markdown("""
+    ### Welcome to the SMS Spam Detection Tool
+    This tool helps you detect whether an SMS message is spam or not using the power of AI. 
+    It also provides suggestions on how to improve or modify the text.
+    """)
+    
+    # Navigation buttons to Sign In or Sign Up
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("Sign In"):
+            st.session_state.page = "sign_in"
+    with col2:
+        if st.button("Sign Up"):
+            st.session_state.page = "sign_up"
+
+# Sign In Page
+def sign_in_page():
+    st.subheader("Sign In")
+    
+    email = st.text_input("Email Address", placeholder="Enter your email address")
+    password = st.text_input("Password", type='password', placeholder="Enter your password")
+    
+    if st.button("Log In"):
+        if email and password:
+            user = check_user(email, password)
+            if user:
+                st.success("Logged in successfully!")
+                st.session_state.page = "program"
+            else:
+                st.error("Invalid email or password. Please try again.")
+        else:
+            st.warning("Please enter both email and password to log in.")
+    
+    if st.button("Back to Welcome Page"):
+        st.session_state.page = "welcome"
+
+# Sign Up Page
+def sign_up_page():
+    st.subheader("Create a New Account")
+    
+    email = st.text_input("Email Address", placeholder="Enter your email address")
+    password = st.text_input("Password", type='password', placeholder="Enter your password")
+    confirm_password = st.text_input("Confirm Password", type='password', placeholder="Re-enter your password")
+    
+    if st.button("Sign Up"):
+        if email and password and confirm_password:
+            if password == confirm_password:
+                try:
+                    register_user(email, password)
+                    st.success("Account created successfully! You can now log in.")
+                    st.session_state.page = "sign_in"
+                except sqlite3.IntegrityError:
+                    st.error("This email is already registered. Please use a different email.")
+            else:
+                st.error("Passwords do not match. Please check and try again.")
+        else:
+            st.warning("Please fill out all fields to create an account.")
+    
+    if st.button("Back to Welcome Page"):
+        st.session_state.page = "welcome"
+
+# Program Page (after successful sign-in)
+def program_page():
+    st.title("SMS Spam Detection")
+    st.markdown("""
+    ### Message Spam Detection
+    Enter the SMS message you want to check for spam detection. The AI will tell you whether it's spam or not.
+    """)
+    
+    # Message input
+    message = st.text_area("Enter SMS Message:", placeholder="Type your SMS here...")
+    
+    if st.button("Check if Spam"):
+        if message:
+            ai_prompt = f"Is the following message spam or not? Respond with 'Spam' or 'Not Spam': {message}"
+            ai_response = genAI(ai_prompt)
+            result = ai_response.strip()  # Extracting the response from Gemini
+
+            # Set score based on AI response
+            if result.lower() == 'spam':
+                score = "Poor"
+            elif result.lower() == 'not spam':
+                score = "Good"
+            else:
+                score = "Uncertain"
+
+            # Additional Metrics
+            words = len(message.split())
+            read_time = round(words / 2)
+
+            # Gemini AI: Generate improvement suggestions
+            ai_suggestion = genAI(f"Provide suggestions for improving this message: '{message}'")
+            
+            # Display results
+            st.success(f"The message is classified as: {result.capitalize()}")
+            st.markdown(f"**Spam Detection Score**: {score}")
+            st.write(f"**Word Count**: {words}")
+            st.write(f"**Estimated Read Time**: {read_time} seconds")
+
+            # Display AI suggestion
+            st.markdown("### AI Suggestion for Improving the Message:")
+            st.write(ai_suggestion)
+
+        else:
+            st.warning("Please enter a message to check for spam.")
+    
+    if st.button("Log Out"):
+        st.session_state.page = "welcome"
+
+# Main function to control the page flow
 def main():
     create_user_table()  # Ensure the database table is created
     
-    st.title("SMS Spam Detection with AI Suggestions")
+    # Initialize session state for page navigation
+    if 'page' not in st.session_state:
+        st.session_state.page = "welcome"  # Start with the welcome page
     
-    st.markdown(""" 
-    This is a spam detection tool for SMS messages. 
-    Enter a message, and the tool will predict if it's spam or not using Gemini AI.
-    Additionally, Gemini AI will provide suggestions on improving or modifying the text.
-    """)
-    
-    menu = ["Sign In", "Sign Up"]
-    choice = st.sidebar.selectbox("Select an option", menu)
-
-    # Sign In Page
-    if choice == "Sign In":
-        st.subheader("Sign In")
-        
-        # User input
-        email = st.text_input("Email")
-        password = st.text_input("Password", type='password')
-        
-        if st.button("Log In"):
-            if email and password:
-                user = check_user(email, password)
-                if user:
-                    st.success("Logged In Successfully!")
-                    # Call spam detection and AI suggestions here
-                    message = st.text_area("Enter SMS message:", "Type here...")
-
-                    if st.button("Check if Spam"):
-                        if message:
-                            # Send the message to Gemini AI for spam detection
-                            ai_prompt = f"Is the following message spam or not? Respond with 'Spam' or 'Not Spam': {message}"
-                            ai_response = genAI(ai_prompt)
-                            result = ai_response.strip()  # Extracting the response from Gemini
-
-                            # Set score based on AI response
-                            if result.lower() == 'spam':
-                                score = "Poor"
-                            elif result.lower() == 'not spam':
-                                score = "Good"
-                            else:
-                                score = "Uncertain"
-
-                            # Additional Metrics
-                            words = len(message.split())
-                            read_time = round(words / 2)
-
-                            # Gemini AI: Generate improvement suggestions
-                            ai_suggestion = genAI(f"Provide suggestions for improving this message: '{message}'")
-                            
-                            # Display results
-                            st.success(f'The message is: {result}')
-                            st.markdown(f"Overall score: {score}")
-                            st.write(f"Words: {words}")
-                            st.write(f"Read time: {read_time} seconds")
-
-                            # Display AI suggestion
-                            st.markdown("**AI Suggestion for Improving the Message:**")
-                            st.write(ai_suggestion)
-
-                        else:
-                            st.warning("Please enter a message.")
-                else:
-                    st.error("Invalid email or password.")
-            else:
-                st.warning("Please enter both email and password.")
-
-    # Sign Up Page
-    if choice == "Sign Up":
-        st.subheader("Sign Up")
-
-        # User input
-        email = st.text_input("Email")
-        password = st.text_input("Password", type='password')
-        confirm_password = st.text_input("Confirm Password", type='password')
-
-        if st.button("Sign Up"):
-            if email and password and confirm_password:
-                if password == confirm_password:
-                    try:
-                        register_user(email, password)
-                        st.success("Account created successfully! You can now log in.")
-                    except sqlite3.IntegrityError:
-                        st.error("This email is already registered.")
-                else:
-                    st.error("Passwords do not match.")
-            else:
-                st.warning("Please fill out all fields.")
+    if st.session_state.page == "welcome":
+        welcome_page()
+    elif st.session_state.page == "sign_in":
+        sign_in_page()
+    elif st.session_state.page == "sign_up":
+        sign_up_page()
+    elif st.session_state.page == "program":
+        program_page()
 
 if __name__ == '__main__':
     main()
