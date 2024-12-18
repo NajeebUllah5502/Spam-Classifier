@@ -5,16 +5,9 @@ import google.generativeai as genai
 
 # Configure the Gemini API
 def genAI(user_prompt):
-    # Configure the API key for the generative AI service
     genai.configure(api_key="AIzaSyBEXfh1wUUdCFEsT_yZ_DUyov-49mk-MDw")
-
-    # Initialize the generative model (make sure the model name is correct)
     model = genai.GenerativeModel("gemini-1.5-flash")
-
-    # Request the AI to generate content based on the user-provided prompt
     response = model.generate_content(user_prompt)
-
-    # Return the AI's response text
     return response.text
 
 # Database setup function to create the user table
@@ -31,10 +24,7 @@ def create_user_table():
 def register_user(email, password):
     conn = sqlite3.connect('users.db')
     cursor = conn.cursor()
-    
-    # Hash the password before storing it
     hashed_password = hashlib.sha256(password.encode()).hexdigest()
-    
     cursor.execute('''INSERT INTO users (email, password) VALUES (?, ?)''', (email, hashed_password))
     conn.commit()
     conn.close()
@@ -43,9 +33,7 @@ def register_user(email, password):
 def check_user(email, password):
     conn = sqlite3.connect('users.db')
     cursor = conn.cursor()
-    
     hashed_password = hashlib.sha256(password.encode()).hexdigest()
-    
     cursor.execute('''SELECT * FROM users WHERE email = ? AND password = ?''', (email, hashed_password))
     user = cursor.fetchone()
     conn.close()
@@ -61,7 +49,7 @@ def welcome_page():
     Choose an option below to get started:
     """)
     
-    # Navigation buttons to Sign In or Sign Up
+    # Clear and direct navigation buttons to Sign In or Sign Up
     col1, col2 = st.columns([2, 2])
     with col1:
         if st.button("Sign In", use_container_width=True):
@@ -78,17 +66,19 @@ def sign_in_page():
     email = st.text_input("Email Address", placeholder="Enter your email address", key="sign_in_email")
     password = st.text_input("Password", type='password', placeholder="Enter your password", key="sign_in_password")
     
+    # Sign In action with immediate feedback
     if st.button("Log In", use_container_width=True):
         if email and password:
             user = check_user(email, password)
             if user:
                 st.success("Logged in successfully!")
-                st.session_state.page = "program"
+                st.session_state.page = "program"  # Redirect to program after successful login
             else:
                 st.error("Invalid email or password. Please try again.")
         else:
             st.warning("Please enter both email and password to log in.")
     
+    # Navigation back to Welcome Page
     if st.button("Back to Welcome Page", use_container_width=True):
         st.session_state.page = "welcome"
 
@@ -101,13 +91,14 @@ def sign_up_page():
     password = st.text_input("Password", type='password', placeholder="Enter your password", key="sign_up_password")
     confirm_password = st.text_input("Confirm Password", type='password', placeholder="Re-enter your password", key="confirm_password")
     
+    # Sign Up action with immediate feedback
     if st.button("Sign Up", use_container_width=True):
         if email and password and confirm_password:
             if password == confirm_password:
                 try:
                     register_user(email, password)
                     st.success("Account created successfully! You can now log in.")
-                    st.session_state.page = "sign_in"
+                    st.session_state.page = "sign_in"  # Redirect to sign-in page after successful sign up
                 except sqlite3.IntegrityError:
                     st.error("This email is already registered. Please use a different email.")
             else:
@@ -115,6 +106,7 @@ def sign_up_page():
         else:
             st.warning("Please fill out all fields to create an account.")
     
+    # Navigation back to Welcome Page
     if st.button("Back to Welcome Page", use_container_width=True):
         st.session_state.page = "welcome"
 
@@ -129,6 +121,7 @@ def program_page():
     # Message input
     message = st.text_area("Enter SMS Message:", placeholder="Type your SMS here...", height=150)
     
+    # Spam detection action
     if st.button("Check if Spam", use_container_width=True):
         if message:
             ai_prompt = f"Is the following message spam or not? Respond with 'Spam' or 'Not Spam': {message}"
@@ -163,6 +156,7 @@ def program_page():
         else:
             st.warning("Please enter a message to check for spam.")
     
+    # Navigation for Log Out
     if st.button("Log Out", use_container_width=True):
         st.session_state.page = "welcome"
 
