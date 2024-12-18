@@ -53,30 +53,32 @@ def check_user(email, password):
 
 # Welcome Page
 def welcome_page():
-    st.title("SMS Spam Detection with AI Suggestions")
+    st.title("AI-Powered SMS Spam Detection Tool")
     st.markdown("""
     ### Welcome to the SMS Spam Detection Tool
-    This tool helps you detect whether an SMS message is spam or not using the power of AI. 
-    It also provides suggestions on how to improve or modify the text.
+    Our AI-driven tool helps you detect whether an SMS message is spam or not, while also providing suggestions on how to improve or modify the text for better engagement.
+    
+    Choose an option below to get started:
     """)
     
     # Navigation buttons to Sign In or Sign Up
-    col1, col2 = st.columns(2)
+    col1, col2 = st.columns([2, 2])
     with col1:
-        if st.button("Sign In"):
+        if st.button("Sign In", use_container_width=True):
             st.session_state.page = "sign_in"
     with col2:
-        if st.button("Sign Up"):
+        if st.button("Sign Up", use_container_width=True):
             st.session_state.page = "sign_up"
 
 # Sign In Page
 def sign_in_page():
-    st.subheader("Sign In")
+    st.subheader("Log In to Your Account")
+    st.markdown("Please enter your credentials to access the SMS Spam Detection Tool.")
+
+    email = st.text_input("Email Address", placeholder="Enter your email address", key="sign_in_email")
+    password = st.text_input("Password", type='password', placeholder="Enter your password", key="sign_in_password")
     
-    email = st.text_input("Email Address", placeholder="Enter your email address")
-    password = st.text_input("Password", type='password', placeholder="Enter your password")
-    
-    if st.button("Log In"):
+    if st.button("Log In", use_container_width=True):
         if email and password:
             user = check_user(email, password)
             if user:
@@ -87,18 +89,19 @@ def sign_in_page():
         else:
             st.warning("Please enter both email and password to log in.")
     
-    if st.button("Back to Welcome Page"):
+    if st.button("Back to Welcome Page", use_container_width=True):
         st.session_state.page = "welcome"
 
 # Sign Up Page
 def sign_up_page():
     st.subheader("Create a New Account")
+    st.markdown("Please fill out the form below to create a new account.")
+
+    email = st.text_input("Email Address", placeholder="Enter your email address", key="sign_up_email")
+    password = st.text_input("Password", type='password', placeholder="Enter your password", key="sign_up_password")
+    confirm_password = st.text_input("Confirm Password", type='password', placeholder="Re-enter your password", key="confirm_password")
     
-    email = st.text_input("Email Address", placeholder="Enter your email address")
-    password = st.text_input("Password", type='password', placeholder="Enter your password")
-    confirm_password = st.text_input("Confirm Password", type='password', placeholder="Re-enter your password")
-    
-    if st.button("Sign Up"):
+    if st.button("Sign Up", use_container_width=True):
         if email and password and confirm_password:
             if password == confirm_password:
                 try:
@@ -112,7 +115,7 @@ def sign_up_page():
         else:
             st.warning("Please fill out all fields to create an account.")
     
-    if st.button("Back to Welcome Page"):
+    if st.button("Back to Welcome Page", use_container_width=True):
         st.session_state.page = "welcome"
 
 # Program Page (after successful sign-in)
@@ -120,13 +123,13 @@ def program_page():
     st.title("SMS Spam Detection")
     st.markdown("""
     ### Message Spam Detection
-    Enter the SMS message you want to check for spam detection. The AI will tell you whether it's spam or not.
+    Enter the SMS message you want to check for spam detection. The AI will tell you whether it's spam or not and provide suggestions for improvement.
     """)
     
     # Message input
-    message = st.text_area("Enter SMS Message:", placeholder="Type your SMS here...")
+    message = st.text_area("Enter SMS Message:", placeholder="Type your SMS here...", height=150)
     
-    if st.button("Check if Spam"):
+    if st.button("Check if Spam", use_container_width=True):
         if message:
             ai_prompt = f"Is the following message spam or not? Respond with 'Spam' or 'Not Spam': {message}"
             ai_response = genAI(ai_prompt)
@@ -160,7 +163,7 @@ def program_page():
         else:
             st.warning("Please enter a message to check for spam.")
     
-    if st.button("Log Out"):
+    if st.button("Log Out", use_container_width=True):
         st.session_state.page = "welcome"
 
 # Main function to control the page flow
