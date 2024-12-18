@@ -53,10 +53,10 @@ def welcome_page():
     col1, col2 = st.columns([2, 2])
     with col1:
         if st.button("Sign In", use_container_width=True):
-            st.session_state.page = "sign_in"
+            st.session_state.page = "sign_in"  # Automatically navigate to sign-in
     with col2:
         if st.button("Sign Up", use_container_width=True):
-            st.session_state.page = "sign_up"
+            st.session_state.page = "sign_up"  # Automatically navigate to sign-up
 
 # Sign In Page
 def sign_in_page():
@@ -72,7 +72,7 @@ def sign_in_page():
             user = check_user(email, password)
             if user:
                 st.success("Logged in successfully!")
-                st.session_state.page = "program"  # Redirect to program after successful login
+                st.session_state.page = "program"  # Automatically redirect to the program page
             else:
                 st.error("Invalid email or password. Please try again.")
         else:
@@ -98,7 +98,7 @@ def sign_up_page():
                 try:
                     register_user(email, password)
                     st.success("Account created successfully! You can now log in.")
-                    st.session_state.page = "sign_in"  # Redirect to sign-in page after successful sign up
+                    st.session_state.page = "sign_in"  # Automatically redirect to the sign-in page
                 except sqlite3.IntegrityError:
                     st.error("This email is already registered. Please use a different email.")
             else:
