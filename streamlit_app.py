@@ -1,3 +1,4 @@
+pip install stripe 
 import stripe
 import streamlit as st
 
