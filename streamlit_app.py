@@ -2,6 +2,8 @@ import sqlite3
 import hashlib
 import streamlit as st
 import google.generativeai as genai
+import stripe
+from datetime import datetime
 
 # Configure the Gemini API
 def genAI(user_prompt):
@@ -10,13 +12,18 @@ def genAI(user_prompt):
     response = model.generate_content(user_prompt)
     return response.text
 
+# Configure Stripe
+stripe.api_key = "sk_test_XXXXXXXXXXXXXXXXXXXX"  # Replace with your Stripe secret key
+
 # Database setup function to create the user table
 def create_user_table():
     conn = sqlite3.connect('users.db')
     cursor = conn.cursor()
     cursor.execute('''CREATE TABLE IF NOT EXISTS users (
                         email TEXT PRIMARY KEY,
-                        password TEXT)''')
+                        password TEXT,
+                        stripe_customer_id TEXT,
+                        subscription_status TEXT)''')
     conn.commit()
     conn.close()
 
@@ -25,7 +32,8 @@ def register_user(email, password):
     conn = sqlite3.connect('users.db')
     cursor = conn.cursor()
     hashed_password = hashlib.sha256(password.encode()).hexdigest()
-    cursor.execute('''INSERT INTO users (email, password) VALUES (?, ?)''', (email, hashed_password))
+    cursor.execute('''INSERT INTO users (email, password, stripe_customer_id, subscription_status) 
+                      VALUES (?, ?, ?, ?)''', (email, hashed_password, "", "inactive"))
     conn.commit()
     conn.close()
 
@@ -39,89 +47,86 @@ def check_user(email, password):
     conn.close()
     return user
 
-# Welcome Page
-def welcome_page():
-    st.title("AI-Powered SMS Spam Detection Tool")
+# Function to create a Stripe customer and subscription
+def create_stripe_subscription(email):
+    try:
+        # Create Stripe customer
+        customer = stripe.Customer.create(
+            email=email,
+            description="Customer for SMS Spam Detection Tool"
+        )
+
+        # Create a checkout session
+        session = stripe.checkout.Session.create(
+            payment_method_types=['card'],
+            line_items=[
+                {
+                    'price_data': {
+                        'currency': 'usd',
+                        'product_data': {
+                            'name': 'SMS Spam Detection Tool Subscription',
+                        },
+                        'unit_amount': 500,  # Amount in cents (e.g., $5.00)
+                    },
+                    'quantity': 1,
+                },
+            ],
+            mode='subscription',
+            success_url="http://localhost:8501/success",  # Redirect URL after success
+            cancel_url="http://localhost:8501/cancel",  # Redirect URL if canceled
+        )
+
+        # Update the user with Stripe customer ID
+        conn = sqlite3.connect('users.db')
+        cursor = conn.cursor()
+        cursor.execute('''UPDATE users SET stripe_customer_id = ?, subscription_status = ? WHERE email = ?''',
+                       (customer.id, "inactive", email))
+        conn.commit()
+        conn.close()
+
+        return session.url
+
+    except Exception as e:
+        st.error(f"Error creating Stripe subscription: {e}")
+
+# Page to handle Stripe subscription
+def subscribe_page():
+    st.title("Subscribe to SMS Spam Detection Tool")
     st.markdown("""
-    ### Welcome to the SMS Spam Detection Tool
-    Our AI-driven tool helps you detect whether an SMS message is spam or not, while also providing suggestions on how to improve or modify the text for better engagement.
-    
-    Choose an option below to get started:
+    Subscribe to gain full access to the SMS Spam Detection Tool for an enhanced experience.
     """)
-    
-    # Clear and direct navigation buttons to Sign In or Sign Up
-    col1, col2 = st.columns([2, 2])
-    with col1:
-        if st.button("Sign In", use_container_width=True):
-            st.session_state.page = "sign_in"  # Automatically navigate to sign-in
-    with col2:
-        if st.button("Sign Up", use_container_width=True):
-            st.session_state.page = "sign_up"  # Automatically navigate to sign-up
 
-# Sign In Page
-def sign_in_page():
-    st.subheader("Log In to Your Account")
-    st.markdown("Please enter your credentials to access the SMS Spam Detection Tool.")
+    # Check if user is logged in
+    if 'email' in st.session_state:
+        email = st.session_state.email
+        session_url = create_stripe_subscription(email)
 
-    email = st.text_input("Email Address", placeholder="Enter your email address", key="sign_in_email")
-    password = st.text_input("Password", type='password', placeholder="Enter your password", key="sign_in_password")
-    
-    # Sign In action with immediate feedback
-    if st.button("Log In", use_container_width=True):
-        if email and password:
-            user = check_user(email, password)
-            if user:
-                st.success("Logged in successfully!")
-                st.session_state.page = "program"  # Automatically redirect to the program page
-            else:
-                st.error("Invalid email or password. Please try again.")
-        else:
-            st.warning("Please enter both email and password to log in.")
-    
-    # Navigation back to Welcome Page
-    if st.button("Back to Welcome Page", use_container_width=True):
-        st.session_state.page = "welcome"
-
-# Sign Up Page
-def sign_up_page():
-    st.subheader("Create a New Account")
-    st.markdown("Please fill out the form below to create a new account.")
-
-    email = st.text_input("Email Address", placeholder="Enter your email address", key="sign_up_email")
-    password = st.text_input("Password", type='password', placeholder="Enter your password", key="sign_up_password")
-    confirm_password = st.text_input("Confirm Password", type='password', placeholder="Re-enter your password", key="confirm_password")
-    
-    # Sign Up action with immediate feedback
-    if st.button("Sign Up", use_container_width=True):
-        if email and password and confirm_password:
-            if password == confirm_password:
-                try:
-                    register_user(email, password)
-                    st.success("Account created successfully! You can now log in.")
-                    st.session_state.page = "sign_in"  # Automatically redirect to the sign-in page
-                except sqlite3.IntegrityError:
-                    st.error("This email is already registered. Please use a different email.")
-            else:
-                st.error("Passwords do not match. Please check and try again.")
-        else:
-            st.warning("Please fill out all fields to create an account.")
-    
-    # Navigation back to Welcome Page
-    if st.button("Back to Welcome Page", use_container_width=True):
-        st.session_state.page = "welcome"
+        st.markdown(f"To complete your subscription, click the button below:")
+        if st.button("Subscribe Now", use_container_width=True):
+            st.write(f"Redirecting to Stripe Checkout...")
+            st.markdown(f'<a href="{session_url}" target="_blank">Proceed with Subscription</a>', unsafe_allow_html=True)
+    else:
+        st.warning("You must log in to subscribe. Please log in to proceed.")
 
 # Program Page (after successful sign-in)
 def program_page():
-    st.title("SMS Spam Detection")
-    st.markdown("""
-    ### Message Spam Detection
-    Enter the SMS message you want to check for spam detection. The AI will tell you whether it's spam or not and provide suggestions for improvement.
-    """)
+    # Check subscription status before showing content
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+    cursor.execute('''SELECT subscription_status FROM users WHERE email = ?''', (st.session_state.email,))
+    user = cursor.fetchone()
+    conn.close()
+
+    if user and user[0] == 'inactive':
+        st.warning("Please subscribe to gain full access.")
+        subscribe_page()
+        return
     
-    # Message input
+    st.title("SMS Spam Detection")
+    st.markdown("""Enter the SMS message you want to check for spam detection. The AI will tell you whether it's spam or not and provide suggestions for improvement.""")
+
     message = st.text_area("Enter SMS Message:", placeholder="Type your SMS here...", height=150)
     
-    # Spam detection action
     if st.button("Check if Spam", use_container_width=True):
         if message:
             ai_prompt = f"Is the following message spam or not? Respond with 'Spam' or 'Not Spam': {message}"
@@ -140,7 +145,6 @@ def program_page():
             words = len(message.split())
             read_time = round(words / 2)
 
-            # Gemini AI: Generate improvement suggestions
             ai_suggestion = genAI(f"Provide suggestions for improving this message: '{message}'")
             
             # Display results
@@ -156,7 +160,6 @@ def program_page():
         else:
             st.warning("Please enter a message to check for spam.")
     
-    # Navigation for Log Out
     if st.button("Log Out", use_container_width=True):
         st.session_state.page = "welcome"
 
