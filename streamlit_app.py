@@ -57,7 +57,7 @@ def load_previous_data():
         st.session_state.generated_data = {}
 
 # UI
-st.title("Email Generator")
+st.title("Email Scrraper For Instagram")
 
 load_previous_data()
 
