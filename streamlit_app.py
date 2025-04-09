@@ -12,7 +12,7 @@ GEMINI_API_KEY = "AIzaSyBEXfh1wUUdCFEsT_yZ_DUyov-49mk-MDw"
 GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}"
 GEMINI_HEADERS = {"Content-Type": "application/json"}
 
-USER_ACCESS_TOKEN = 'EAAQ1ZAgHKnkEBOZCMqeeQ5ty4ZAAOCPgIw9yMaHXfMmDZCBZBSxXPrChkfTWqmdpXB9yL00Vj1ljxv6fsmAZA0u7x966CzzGuf48PKmzpLjqvZCIXE3Y39XJSe4vm0HGplSxZAlaaUXqlXOAPmMHvAhEPgVdrjDNz3OgVnABgZCcmncjZCrrSgVhYEEGHnUHsdyraf4HeC1ZAdEzNbiAohPS5S4H5RZCiRKze0ZB8m1ZCFSZCy9FQkZD'
+USER_ACCESS_TOKEN = 'EAAQ1ZAgHKnkEBO7RtZBEbOR1dvYdlwd4wjN9hTlNdbzhkZA94j0dd4Pn8BrLC0oMiUR8qNJk7pykODLovhubNLanodFVqsPa60DPza3m6wgj49o5vuYpmai5pXniq1qJlDfAb6kZAjYb7tqDCPhWEaaqdnGlJw8KiZCZBtQz4YZAhsZAPTlAxZAHs1NRgXpXBwNOLJrgZBLgweQO5Kf8h7WaOc0BZAIe9JQrTrU790okXlzarkZD'
 PAGE_ID = '599271760084973'
 
 # ===== Functions =====
