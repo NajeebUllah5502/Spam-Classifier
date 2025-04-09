@@ -22,7 +22,7 @@ st.markdown("Generate images using a prompt and get a Gemini answer in Dutch.")
 
 # ---- Separate Inputs ----
 image_prompt = st.text_input("🎨 Enter prompt for image generation:")
-gemini_question = st.text_input("🧠 Enter question/topic for Gemini (response in Dutch):")
+gemini_question = st.text_input("🧠 Enter question/topic (response in Dutch):")
 
 if st.button("🚀 Generate Both"):
     if not image_prompt.strip() and not gemini_question.strip():
