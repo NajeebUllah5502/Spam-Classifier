@@ -90,29 +90,33 @@ def main():
     image_prompt = st.text_input("Enter a prompt for image generation:")
     gemini_question = st.text_area("Enter a question/topic for Gemini (response in Dutch):")
     
-    if image_prompt.strip() or gemini_question.strip():
-        if image_prompt.strip():
-            # Generate the image
-            image_bytes = generate_image(image_prompt)
-            if image_bytes:
-                filename = f"image_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
-                with open(filename, 'wb') as img_file:
-                    img_file.write(image_bytes)
-                st.image(image_bytes, caption="Generated Image", use_column_width=True)
-                st.download_button(label="Download Image", data=image_bytes, file_name=filename)
-            else:
-                st.error("Failed to generate the image.")
+    # Button to trigger generation and posting
+    if st.button("Generate and Post"):
+        if image_prompt.strip() or gemini_question.strip():
+            if image_prompt.strip():
+                # Generate the image
+                image_bytes = generate_image(image_prompt)
+                if image_bytes:
+                    filename = f"image_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+                    with open(filename, 'wb') as img_file:
+                        img_file.write(image_bytes)
+                    st.image(image_bytes, caption="Generated Image", use_column_width=True)
+                    st.download_button(label="Download Image", data=image_bytes, file_name=filename)
+                else:
+                    st.error("Failed to generate the image.")
+            
+            if gemini_question.strip():
+                gemini_response = generate_gemini_response(gemini_question)
+                if gemini_response:
+                    st.subheader("Gemini Response (in Dutch):")
+                    st.write(gemini_response)
+
+                    # Get the Facebook page access token
+                    page_access_token = get_page_access_token(USER_ACCESS_TOKEN, PAGE_ID)
+                    if page_access_token:
+                        post_to_facebook(page_access_token, PAGE_ID, gemini_response, image_bytes)
+        else:
+            st.error("Please enter at least one prompt for image generation or a question for Gemini.")
         
-        if gemini_question.strip():
-            gemini_response = generate_gemini_response(gemini_question)
-            if gemini_response:
-                st.subheader("Gemini Response (in Dutch):")
-                st.write(gemini_response)
-
-                # Get the Facebook page access token
-                page_access_token = get_page_access_token(USER_ACCESS_TOKEN, PAGE_ID)
-                if page_access_token:
-                    post_to_facebook(page_access_token, PAGE_ID, gemini_response, image_bytes)
-
 if __name__ == "__main__":
     main()
