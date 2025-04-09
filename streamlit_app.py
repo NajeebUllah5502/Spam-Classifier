@@ -2,7 +2,6 @@ import streamlit as st
 import requests
 import time
 from datetime import datetime
-from pathlib import Path
 import json
 
 # ===== Hugging Face API (Image Generation) =====
@@ -15,6 +14,10 @@ GEMINI_API_KEY = "AIzaSyBEXfh1wUUdCFEsT_yZ_DUyov-49mk-MDw"
 GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}"
 GEMINI_HEADERS = {"Content-Type": "application/json"}
 
+# ===== Facebook API =====
+USER_ACCESS_TOKEN = 'EAAQ1ZAgHKnkEBOZCMqeeQ5ty4ZAAOCPgIw9yMaHXfMmDZCBZBSxXPrChkfTWqmdpXB9yL00Vj1ljxv6fsmAZA0u7x966CzzGuf48PKmzpLjqvZCIXE3Y39XJSe4vm0HGplSxZAlaaUXqlXOAPmMHvAhEPgVdrjDNz3OgVnABgZCcmncjZCrrSgVhYEEGHnUHsdyraf4HeC1ZAdEzNbiAohPS5S4H5RZCiRKze0ZB8m1ZCFSZCy9FQkZD'
+PAGE_ID = '599271760084973'
+
 # ===== Streamlit UI =====
 st.set_page_config(page_title="🎨 AI Image & Dutch Gemini Bot", layout="centered")
 st.title("🤖 Dual AI Generator")
@@ -23,6 +26,31 @@ st.markdown("Generate images using a prompt and get a Gemini answer in Dutch.")
 # ---- Separate Inputs ----
 image_prompt = st.text_input("🎨 Enter prompt for image generation:")
 gemini_question = st.text_input("🧠 Enter question/topic for Gemini (response in Dutch):")
+
+def get_page_access_token(user_token, page_id):
+    url = f'https://graph.facebook.com/v22.0/{page_id}?fields=access_token&access_token={user_token}'
+    response = requests.get(url)
+    
+    if response.status_code == 200:
+        page_data = response.json()
+        return page_data.get('access_token')
+    else:
+        st.error(f"Error in getting page access token: {response.json()}")
+        return None
+
+def post_to_facebook(page_access_token, page_id, message, image_data):
+    url = f'https://graph.facebook.com/{page_id}/photos'
+    files = {'file': image_data}
+    params = {
+        'message': message,
+        'access_token': page_access_token
+    }
+    response = requests.post(url, params=params, files=files)
+    
+    if response.status_code == 200:
+        st.success("Post successful!")
+    else:
+        st.error(f"Error in posting: {response.json()}")
 
 if st.button("🚀 Generate Both"):
     if not image_prompt.strip() and not gemini_question.strip():
@@ -71,6 +99,12 @@ if st.button("🚀 Generate Both"):
                     st.error(f"❌ Gemini API fout {gemini_response.status_code}: {gemini_response.text}")
             except Exception as e:
                 st.error(f"❌ Gemini Request Error: {e}")
+
+        # --------------- Facebook Post ---------------
+        page_access_token = get_page_access_token(USER_ACCESS_TOKEN, PAGE_ID)
+        if page_access_token and image_bytes:
+            post_message = "Here's a generated image and Gemini response!"
+            post_to_facebook(page_access_token, PAGE_ID, post_message, image_bytes)
 
         # 🚀 Auto-open Facebook after successful generation
         st.markdown("""
