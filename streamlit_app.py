@@ -17,106 +17,86 @@ GEMINI_HEADERS = {"Content-Type": "application/json"}
 USER_ACCESS_TOKEN = 'EAAQ1ZAgHKnkEBOZCMqeeQ5ty4ZAAOCPgIw9yMaHXfMmDZCBZBSxXPrChkfTWqmdpXB9yL00Vj1ljxv6fsmAZA0u7x966CzzGuf48PKmzpLjqvZCIXE3Y39XJSe4vm0HGplSxZAlaaUXqlXOAPmMHvAhEPgVdrjDNz3OgVnABgZCcmncjZCrrSgVhYEEGHnUHsdyraf4HeC1ZAdEzNbiAohPS5S4H5RZCiRKze0ZB8m1ZCFSZCy9FQkZD'
 PAGE_ID = '599271760084973'
 
-# Step 1: Get Page Access Token
+# Functions
 def get_page_access_token(user_token, page_id):
     url = f'https://graph.facebook.com/v22.0/{page_id}?fields=access_token&access_token={user_token}'
     response = requests.get(url)
-    
-    if response.status_code == 200:
-        page_data = response.json()
-        return page_data.get('access_token')
-    else:
-        st.error("Error in getting page access token: " + response.json())
-        return None
+    return response.json().get('access_token') if response.status_code == 200 else None
 
-# Step 2: Post the image and message to Facebook
 def post_to_facebook(page_access_token, page_id, message, image_data):
     url = f'https://graph.facebook.com/{page_id}/photos'
     files = {'file': image_data}
-    params = {
-        'message': message,
-        'access_token': page_access_token
-    }
+    params = {'message': message, 'access_token': page_access_token}
     response = requests.post(url, params=params, files=files)
-    
-    if response.status_code == 200:
-        st.success("Post successful!")
-    else:
-        st.error(f"Error in posting: {response.json()}")
+    return response.status_code == 200
 
-# Step 3: Generate image using Hugging Face API
 def generate_image(image_prompt):
     payload = {"inputs": image_prompt, "options": {"wait_for_model": True}}
     retries = 3
     for attempt in range(retries):
         try:
-            st.write(f"Attempt {attempt + 1}: Generating Image...")
-            img_response = requests.post(HF_API_URL, headers=HF_HEADERS, json=payload, timeout=60)
-            if img_response.status_code == 200:
-                return img_response.content
-            else:
-                st.warning(f"⚠️ Status {img_response.status_code}: Retrying...")
+            response = requests.post(HF_API_URL, headers=HF_HEADERS, json=payload, timeout=60)
+            if response.status_code == 200:
+                return response.content
         except Exception as e:
-            st.error(f"❌ Image Gen Error: {e}")
+            st.warning(f"Attempt {attempt + 1} failed: {e}")
         time.sleep(5)
-    st.error("❌ Image generation failed after multiple attempts.")
     return None
 
-# Step 4: Get Gemini text response in Dutch
 def generate_gemini_response(question):
-    gemini_body = {
-        "contents": [({
+    body = {
+        "contents": [{
             "parts": [{"text": f"Beantwoord dit in het Nederlands: {question}"}]
-        })]
+        }]
     }
     try:
-        gemini_response = requests.post(GEMINI_URL, headers=GEMINI_HEADERS, json=gemini_body)
-        if gemini_response.status_code == 200:
-            data = gemini_response.json()
-            content_text = data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "Geen inhoud beschikbaar.")
-            return content_text
-        else:
-            st.error(f"Error in Gemini API response: {gemini_response.text}")
-            return None
+        response = requests.post(GEMINI_URL, headers=GEMINI_HEADERS, json=body)
+        if response.status_code == 200:
+            return response.json().get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "Geen inhoud.")
     except Exception as e:
-        st.error(f"❌ Gemini Request Error: {e}")
-        return None
+        st.error(f"Gemini API error: {e}")
+    return None
 
-# Streamlit interface
-def main():
-    st.title("Image Generation and Text Response in Dutch")
-    
-    # Get user input for both image prompt and Gemini question
-    image_prompt = st.text_input("Enter a prompt for image generation:")
-    gemini_question = st.text_area("Enter a question/topic for Gemini (response in Dutch):")
-    
-    # Button to trigger generation and posting
-    if st.button("Generate and Post"):
-        if image_prompt.strip() or gemini_question.strip():
-            if image_prompt.strip():
-                # Generate the image
-                image_bytes = generate_image(image_prompt)
-                if image_bytes:
-                    filename = f"image_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
-                    with open(filename, 'wb') as img_file:
-                        img_file.write(image_bytes)
-                    st.image(image_bytes, caption="Generated Image", use_column_width=True)
-                    st.download_button(label="Download Image", data=image_bytes, file_name=filename)
-                else:
-                    st.error("Failed to generate the image.")
-            
-            if gemini_question.strip():
-                gemini_response = generate_gemini_response(gemini_question)
-                if gemini_response:
-                    st.subheader("Gemini Response (in Dutch):")
-                    st.write(gemini_response)
+# ===== Streamlit App =====
+st.set_page_config(page_title="Image + Dutch Text Generator", layout="centered")
+st.title("🖼️ Image Generator + Gemini Dutch Response")
+st.write("Enter a prompt for an image and a topic/question for Gemini to answer in Dutch.")
 
-                    # Get the Facebook page access token
-                    page_access_token = get_page_access_token(USER_ACCESS_TOKEN, PAGE_ID)
-                    if page_access_token:
-                        post_to_facebook(page_access_token, PAGE_ID, gemini_response, image_bytes)
-        else:
-            st.error("Please enter at least one prompt for image generation or a question for Gemini.")
+image_prompt = st.text_input("🎨 Image Prompt")
+gemini_question = st.text_input("🧠 Gemini Question (Dutch Response)")
+
+if st.button("🚀 Generate and Show Results"):
+    if image_prompt.strip() == "" and gemini_question.strip() == "":
+        st.warning("⚠️ Please enter at least one prompt.")
+    else:
+        if image_prompt.strip():
+            st.info("🔄 Generating image...")
+            image_bytes = generate_image(image_prompt)
+            if image_bytes:
+                st.image(image_bytes, caption="Generated Image", use_column_width=True)
+            else:
+                st.error("❌ Failed to generate image.")
         
-if __name__ == "__main__":
-    main()
+        if gemini_question.strip():
+            st.info("🔄 Generating Dutch response from Gemini...")
+            gemini_response = generate_gemini_response(gemini_question)
+            if gemini_response:
+                st.success("📝 Gemini Dutch Response:")
+                st.write(gemini_response)
+            else:
+                st.error("❌ Failed to get response from Gemini.")
+
+        # Facebook posting
+        if image_prompt.strip() and gemini_question.strip() and image_bytes:
+            if st.checkbox("📤 Post to Facebook"):
+                st.info("Getting Facebook Page Token...")
+                page_token = get_page_access_token(USER_ACCESS_TOKEN, PAGE_ID)
+                if page_token:
+                    st.info("Posting to Facebook...")
+                    success = post_to_facebook(page_token, PAGE_ID, gemini_response, image_bytes)
+                    if success:
+                        st.success("✅ Posted to Facebook successfully!")
+                    else:
+                        st.error("❌ Failed to post to Facebook.")
+                else:
+                    st.error("❌ Couldn't retrieve Facebook Page Access Token.")
