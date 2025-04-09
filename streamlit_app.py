@@ -22,7 +22,7 @@ st.markdown("Generate images using a prompt and get a Gemini answer in Dutch.")
 
 # ---- Separate Inputs ----
 image_prompt = st.text_input("🎨 Enter prompt for image generation:")
-gemini_question = st.text_input("🧠 Enter question/topic (response in Dutch):")
+gemini_question = st.text_input("🧠 Enter question/topic for Gemini (response in Dutch):")
 
 if st.button("🚀 Generate Both"):
     if not image_prompt.strip() and not gemini_question.strip():
@@ -71,3 +71,10 @@ if st.button("🚀 Generate Both"):
                     st.error(f"❌ Gemini API fout {gemini_response.status_code}: {gemini_response.text}")
             except Exception as e:
                 st.error(f"❌ Gemini Request Error: {e}")
+
+        # 🚀 Auto-open Facebook after successful generation
+        st.markdown("""
+            <script>
+                window.open("https://www.facebook.com", "_blank");
+            </script>
+        """, unsafe_allow_html=True)
