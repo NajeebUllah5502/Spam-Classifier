@@ -2,7 +2,6 @@ import streamlit as st
 import requests
 import time
 from datetime import datetime
-import json
 
 # ===== Hugging Face API (Image Generation) =====
 HF_API_URL = "https://api-inference.huggingface.co/models/prompthero/openjourney"
@@ -18,15 +17,7 @@ GEMINI_HEADERS = {"Content-Type": "application/json"}
 USER_ACCESS_TOKEN = 'EAAQ1ZAgHKnkEBOZCMqeeQ5ty4ZAAOCPgIw9yMaHXfMmDZCBZBSxXPrChkfTWqmdpXB9yL00Vj1ljxv6fsmAZA0u7x966CzzGuf48PKmzpLjqvZCIXE3Y39XJSe4vm0HGplSxZAlaaUXqlXOAPmMHvAhEPgVdrjDNz3OgVnABgZCcmncjZCrrSgVhYEEGHnUHsdyraf4HeC1ZAdEzNbiAohPS5S4H5RZCiRKze0ZB8m1ZCFSZCy9FQkZD'
 PAGE_ID = '599271760084973'
 
-# ===== Streamlit UI =====
-st.set_page_config(page_title="🎨 AI Image & Dutch Gemini Bot", layout="centered")
-st.title("🤖 Dual AI Generator")
-st.markdown("Generate images using a prompt and get a Gemini answer in Dutch.")
-
-# ---- Separate Inputs ----
-image_prompt = st.text_input("🎨 Enter prompt for image generation:")
-gemini_question = st.text_input("🧠 Enter question/topic for Gemini (response in Dutch):")
-
+# Step 1: Get Page Access Token
 def get_page_access_token(user_token, page_id):
     url = f'https://graph.facebook.com/v22.0/{page_id}?fields=access_token&access_token={user_token}'
     response = requests.get(url)
@@ -35,9 +26,10 @@ def get_page_access_token(user_token, page_id):
         page_data = response.json()
         return page_data.get('access_token')
     else:
-        st.error(f"Error in getting page access token: {response.json()}")
+        st.error("Error in getting page access token: " + response.json())
         return None
 
+# Step 2: Post the image and message to Facebook
 def post_to_facebook(page_access_token, page_id, message, image_data):
     url = f'https://graph.facebook.com/{page_id}/photos'
     files = {'file': image_data}
@@ -52,63 +44,75 @@ def post_to_facebook(page_access_token, page_id, message, image_data):
     else:
         st.error(f"Error in posting: {response.json()}")
 
-if st.button("🚀 Generate Both"):
-    if not image_prompt.strip() and not gemini_question.strip():
-        st.warning("Please enter at least one prompt.")
-    else:
-        # ---------- Image Generation ----------
-        if image_prompt.strip():
-            st.subheader("🎨 AI Image Output")
-            payload = {"inputs": image_prompt, "options": {"wait_for_model": True}}
-            retries = 3
-            for attempt in range(retries):
-                with st.spinner(f"Attempt {attempt + 1}: Generating Image..."):
-                    try:
-                        img_response = requests.post(HF_API_URL, headers=HF_HEADERS, json=payload, timeout=60)
-                        if img_response.status_code == 200:
-                            image_bytes = img_response.content
-                            filename = f"image_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
-                            st.image(image_bytes, caption="Generated Image", use_column_width=True)
-                            st.download_button("⬇️ Download Image", data=image_bytes, file_name=filename, mime="image/png")
-                            break
-                        else:
-                            st.warning(f"⚠️ Status {img_response.status_code}: Retrying...")
-                    except Exception as e:
-                        st.error(f"❌ Image Gen Error: {e}")
-                    time.sleep(5)
+# Step 3: Generate image using Hugging Face API
+def generate_image(image_prompt):
+    payload = {"inputs": image_prompt, "options": {"wait_for_model": True}}
+    retries = 3
+    for attempt in range(retries):
+        try:
+            st.write(f"Attempt {attempt + 1}: Generating Image...")
+            img_response = requests.post(HF_API_URL, headers=HF_HEADERS, json=payload, timeout=60)
+            if img_response.status_code == 200:
+                return img_response.content
             else:
-                st.error("❌ Image generation failed after multiple attempts.")
+                st.warning(f"⚠️ Status {img_response.status_code}: Retrying...")
+        except Exception as e:
+            st.error(f"❌ Image Gen Error: {e}")
+        time.sleep(5)
+    st.error("❌ Image generation failed after multiple attempts.")
+    return None
 
-        # ---------- Gemini Response in Dutch ----------
+# Step 4: Get Gemini text response in Dutch
+def generate_gemini_response(question):
+    gemini_body = {
+        "contents": [({
+            "parts": [{"text": f"Beantwoord dit in het Nederlands: {question}"}]
+        })]
+    }
+    try:
+        gemini_response = requests.post(GEMINI_URL, headers=GEMINI_HEADERS, json=gemini_body)
+        if gemini_response.status_code == 200:
+            data = gemini_response.json()
+            content_text = data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "Geen inhoud beschikbaar.")
+            return content_text
+        else:
+            st.error(f"Error in Gemini API response: {gemini_response.text}")
+            return None
+    except Exception as e:
+        st.error(f"❌ Gemini Request Error: {e}")
+        return None
+
+# Streamlit interface
+def main():
+    st.title("Image Generation and Text Response in Dutch")
+    
+    # Get user input for both image prompt and Gemini question
+    image_prompt = st.text_input("Enter a prompt for image generation:")
+    gemini_question = st.text_area("Enter a question/topic for Gemini (response in Dutch):")
+    
+    if image_prompt.strip() or gemini_question.strip():
+        if image_prompt.strip():
+            # Generate the image
+            image_bytes = generate_image(image_prompt)
+            if image_bytes:
+                filename = f"image_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+                with open(filename, 'wb') as img_file:
+                    img_file.write(image_bytes)
+                st.image(image_bytes, caption="Generated Image", use_column_width=True)
+                st.download_button(label="Download Image", data=image_bytes, file_name=filename)
+            else:
+                st.error("Failed to generate the image.")
+        
         if gemini_question.strip():
-            st.subheader("🧠 Gemini Antwoord (in Dutch)")
-            gemini_body = {
-                "contents": [{
-                    "parts": [{"text": f"Beantwoord dit in het Nederlands: {gemini_question}"}]
-                }]
-            }
+            gemini_response = generate_gemini_response(gemini_question)
+            if gemini_response:
+                st.subheader("Gemini Response (in Dutch):")
+                st.write(gemini_response)
 
-            try:
-                gemini_response = requests.post(GEMINI_URL, headers=GEMINI_HEADERS, json=gemini_body)
-                if gemini_response.status_code == 200:
-                    data = gemini_response.json()
-                    content_text = data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "Geen inhoud beschikbaar.")
-                    st.success("✅ Gemini antwoord ontvangen:")
-                    st.write(content_text)
-                else:
-                    st.error(f"❌ Gemini API fout {gemini_response.status_code}: {gemini_response.text}")
-            except Exception as e:
-                st.error(f"❌ Gemini Request Error: {e}")
+                # Get the Facebook page access token
+                page_access_token = get_page_access_token(USER_ACCESS_TOKEN, PAGE_ID)
+                if page_access_token:
+                    post_to_facebook(page_access_token, PAGE_ID, gemini_response, image_bytes)
 
-        # --------------- Facebook Post ---------------
-        page_access_token = get_page_access_token(USER_ACCESS_TOKEN, PAGE_ID)
-        if page_access_token and image_bytes:
-            post_message = "Here's a generated image and Gemini response!"
-            post_to_facebook(page_access_token, PAGE_ID, post_message, image_bytes)
-
-        # 🚀 Auto-open Facebook after successful generation
-        st.markdown("""
-            <script>
-                window.open("https://www.facebook.com", "_blank");
-            </script>
-        """, unsafe_allow_html=True)
+if __name__ == "__main__":
+    main()
