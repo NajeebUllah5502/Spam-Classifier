@@ -15,7 +15,7 @@ prompt = f"""
 Je bent een AI-inhoudsassistente voor de officiële beheerder van Fixst — een top-rated telefoon-, tablet- en laptopreparatieservice
 in Hoogvliet, Spijkenisse, Rhoon, Poortugaal, Pernis en de omliggende gebieden.
 
-De beheerder maakt een informatieve post over het onderwerp: {topic}.
+De beheerder maakt een informatieve post over het onderwerp: {gemini_question}.
 
 Op basis van de autoritaire rol van de beheerder, genereer een behulpzame, professionele en duidelijke uitleg of aankondiging
 voor de klanten en websitebezoekers.
