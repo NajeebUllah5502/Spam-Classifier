@@ -69,7 +69,7 @@ def post_to_facebook(page_access_token, page_id, message):
 
 def generate_gemini_response(question):
     body = {
-        "contents": [ {
+        "contents": [{
             "parts": [{"text": prompt}]
         }]
     }
