@@ -4,3 +4,4 @@ nltk
 streamlit
 stripe
 faker
+openpyxl
