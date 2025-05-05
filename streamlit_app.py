@@ -17,17 +17,22 @@ This app will merge by URL, fill in missing emails, **remove rows without email*
 file1 = st.file_uploader("📂 Upload the restaurant file (Website + Email)", type=["csv", "xls", "xlsx"])
 file2 = st.file_uploader("📂 Upload the URL + Email file", type=["csv", "xls", "xlsx"])
 
+# Helper to read files safely
 def read_file(uploaded_file):
-    if uploaded_file.name.endswith('.csv'):
-        return pd.read_csv(uploaded_file)
-    else:
-        return pd.read_excel(uploaded_file)
+    try:
+        if uploaded_file.name.endswith('.csv'):
+            return pd.read_csv(uploaded_file, on_bad_lines='skip')  # skip malformed rows
+        else:
+            return pd.read_excel(uploaded_file)
+    except Exception as e:
+        st.error(f"❌ Failed to read file: {e}")
+        return None
 
 if file1 and file2:
-    try:
-        df1 = read_file(file1)
-        df2 = read_file(file2)
+    df1 = read_file(file1)
+    df2 = read_file(file2)
 
+    if df1 is not None and df2 is not None:
         # Validation
         if 'Website' not in df1.columns:
             st.error("❌ File 1 must contain a 'Website' column.")
@@ -48,14 +53,16 @@ if file1 and file2:
                 suffixes=('', '_from_file2')
             )
 
+            # Fill empty emails from df2
             merged['Email'] = merged.apply(
                 lambda row: row['Email_from_file2'] if pd.isna(row['Email']) or row['Email'].strip() == '' else row['Email'],
                 axis=1
             )
 
+            # Drop helper columns
             merged.drop(columns=['Url', 'Email_from_file2'], inplace=True)
 
-            # Remove rows without valid email
+            # Remove rows without valid emails
             cleaned = merged[merged['Email'].notna() & merged['Email'].str.strip().ne("")]
             cleaned.reset_index(drop=True, inplace=True)
 
@@ -75,7 +82,5 @@ if file1 and file2:
                 file_name="cleaned_restaurant_emails.csv",
                 mime="text/csv"
             )
-    except Exception as e:
-        st.error(f"❌ Error: {e}")
 else:
     st.info("⬆️ Please upload both files to begin.")
