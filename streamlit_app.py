@@ -8,7 +8,7 @@ from openai import OpenAI
 import os
 
 # ================== CONFIG ==================
-OPENAI_API_KEY = "sk-proj-..."  # 🔐 Replace with your actual API key
+OPENAI_API_KEY = "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"  # 🔐 Replace with your actual API key
 PDF_PATH = "reading_material.pdf"
 DEFAULT_URL = "https://accsc.com.au/"
 
