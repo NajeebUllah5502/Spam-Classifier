@@ -6,3 +6,8 @@ stripe
 faker
 openpyxl
 beautifulsoup4
+streamlit
+openai
+requests
+PyMuPDF
+beautifulsoup4
