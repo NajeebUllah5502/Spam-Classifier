@@ -5,3 +5,4 @@ streamlit
 stripe
 faker
 openpyxl
+beautifulsoup4
